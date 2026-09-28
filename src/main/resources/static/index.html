@@ -33,6 +33,7 @@
   .issue .sev{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
   .issue.ERROR .sev{color:var(--err)}
   .issue.WARNING .sev{color:var(--warn)}
+  .issue .code{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:5px;background:#161b22;border:1px solid var(--border);color:var(--accent);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:0}
   .issue .loc{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;margin:2px 0}
   .placeholder{color:var(--muted);font-size:14px}
 </style>
@@ -73,17 +74,18 @@ async function validate(){
   }catch(e){ issues.innerHTML = '<p class="placeholder">Request failed: ' + e + '</p>'; return; }
   if(data.parsed === false){
     badges.innerHTML = '<span class="badge bad">Did not parse</span>';
-    issues.innerHTML = '<div class="issue ERROR"><div class="sev">Parse error</div><div>' + escapeHtml(data.error||'') + '</div></div>';
+    issues.innerHTML = '<div class="issue ERROR"><div class="sev">Parse error</div><div>' + escapeHtml((data.issues && data.issues[0] ? data.issues[0].message : '')) + '</div></div>';
     return;
   }
   var html = '<span class="badge ok">Parsed</span>';
-  if('valid' in data){ html += data.valid ? '<span class="badge ok">Valid</span>' : '<span class="badge bad">Invalid</span>'; }
-  if('issueCount' in data){ html += '<span class="badge neutral">' + data.issueCount + ' issue(s)</span>'; }
+  html += data.valid ? '<span class="badge ok">Valid</span>' : '<span class="badge bad">Invalid</span>';
+  var count = (data.issues || []).length;
+  html += '<span class="badge neutral">' + count + ' issue(s)</span>';
   badges.innerHTML = html;
   var list = data.issues || [];
-  if(list.length === 0){ issues.innerHTML = '<p class="placeholder">No structural issues found.</p>'; return; }
+  if(list.length === 0){ issues.innerHTML = '<p class="placeholder">No issues found.</p>'; return; }
   issues.innerHTML = list.map(function(i){
-    return '<div class="issue ' + (i.severity||'') + '"><div class="sev">' + (i.severity||'') + '</div>' +
+    return '<div class="issue ' + (i.severity||'') + '"><div class="sev">' + (i.severity||'') + (i.code ? ' <span class="code">' + escapeHtml(i.code) + '</span>' : '') + '</div>' +
       (i.location ? '<div class="loc">' + escapeHtml(i.location) + '</div>' : '') +
       '<div>' + escapeHtml(i.message||'') + '</div></div>';
   }).join('');
