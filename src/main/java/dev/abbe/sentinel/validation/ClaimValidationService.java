@@ -8,6 +8,7 @@ import ca.uhn.fhir.validation.ValidationResult;
 import org.hl7.fhir.r4.model.Claim;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -15,10 +16,12 @@ public class ClaimValidationService {
 
     private final IParser jsonParser;
     private final FhirValidator validator;
+    private final DenialRuleEngine denialRuleEngine;
 
-    public ClaimValidationService(FhirContext fhirContext, FhirValidator validator) {
+    public ClaimValidationService(FhirContext fhirContext, FhirValidator validator, DenialRuleEngine denialRuleEngine) {
         this.jsonParser = fhirContext.newJsonParser();
         this.validator = validator;
+        this.denialRuleEngine = denialRuleEngine;
     }
 
     public ValidationOutcome validate(String claimJson) {
@@ -26,18 +29,26 @@ public class ClaimValidationService {
         try {
             claim = jsonParser.parseResource(Claim.class, claimJson);
         } catch (DataFormatException e) {
-            // Not a parseable FHIR Claim, so there is nothing to validate.
             return ValidationOutcome.notParsed(e.getMessage());
         }
 
-        ValidationResult result = validator.validateWithResult(claim);
-        List<ValidationIssue> issues = result.getMessages().stream()
-            .map(m -> new ValidationIssue(
-                m.getSeverity().name(),
-                m.getLocationString() == null ? "" : m.getLocationString(),
-                m.getMessage()))
-            .toList();
+        List<ValidationIssue> issues = new ArrayList<>();
 
-        return ValidationOutcome.of(result.isSuccessful(), issues);
+        // Layer 1: is this structurally valid FHIR R4?
+        ValidationResult structural = validator.validateWithResult(claim);
+        structural.getMessages().forEach(m -> issues.add(new ValidationIssue(
+            m.getSeverity().name(),
+            "",
+            m.getLocationString() == null ? "" : m.getLocationString(),
+            m.getMessage())));
+
+        // Layer 2: payer denial rules that FHIR cannot see, mapped to NPHIES codes.
+        List<ValidationIssue> denialIssues = denialRuleEngine.evaluate(claim);
+        issues.addAll(denialIssues);
+
+        boolean structuralOk = structural.isSuccessful();
+        boolean noDenialErrors = denialIssues.stream().noneMatch(i -> "ERROR".equals(i.severity()));
+
+        return ValidationOutcome.of(structuralOk && noDenialErrors, issues);
     }
 }
