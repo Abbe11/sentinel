@@ -4,62 +4,159 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sentinel — FHIR Claim Validator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#2dd4bf;--err:#f85149;--warn:#d29922;--ok:#3fb950;}
+  :root{
+    --bg:#0a0e14;--panel:#12161f;--panel2:#0e131b;--border:#232a36;--text:#e6edf3;
+    --muted:#8b96a5;--accent:#2dd4bf;--accent2:#38bdf8;--err:#f85149;--warn:#d29922;--ok:#3fb950;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-  header{padding:24px 32px;border-bottom:1px solid var(--border)}
-  header h1{margin:0;font-size:20px;letter-spacing:.5px}
-  header h1 span{color:var(--accent)}
-  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
-  main{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:32px;max-width:1100px;margin:0 auto}
-  @media(max-width:820px){main{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px}
-  .card h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
-  textarea{width:100%;height:280px;background:#0d1117;color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:ui-monospace,Consolas,monospace;font-size:13px;resize:vertical}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,Segoe UI,Roboto,sans-serif;
+    background-image:radial-gradient(900px 500px at 80% -10%,rgba(56,189,248,.10),transparent),radial-gradient(700px 500px at 0% 0%,rgba(45,212,191,.10),transparent);}
+  h1,h2,.brand span{font-family:Sora,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;border-bottom:1px solid var(--border)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+  .brand span{letter-spacing:.5px}
+  .chips-top{color:var(--muted);font-size:12px;font-family:ui-monospace,Consolas,monospace}
+  .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center;padding:56px 0 40px}
+  @media(max-width:820px){.hero{grid-template-columns:1fr;padding:36px 0}}
+  .eyebrow{display:inline-block;font-size:12px;letter-spacing:2px;color:var(--accent);font-family:ui-monospace,monospace;
+    border:1px solid var(--border);border-radius:999px;padding:5px 12px;margin-bottom:18px}
+  .hero h1{font-size:40px;line-height:1.1;margin:0 0 16px;font-weight:800}
+  @media(max-width:820px){.hero h1{font-size:30px}}
+  .hero p{color:var(--muted);font-size:16px;line-height:1.6;margin:0 0 22px;max-width:44ch}
+  .layers{display:flex;flex-direction:column;gap:10px}
+  .layer{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text)}
+  .layer .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  .hero-visual{position:relative;height:300px;display:flex;align-items:center;justify-content:center}
+  .glow{position:absolute;width:260px;height:260px;border-radius:50%;
+    background:radial-gradient(circle,rgba(45,212,191,.22),transparent 65%);filter:blur(6px)}
+  .shield{position:relative;filter:drop-shadow(0 12px 40px rgba(45,212,191,.25))}
+  .chip{position:absolute;font-family:ui-monospace,monospace;font-size:12px;padding:6px 10px;border-radius:8px;
+    background:var(--panel);border:1px solid var(--border);color:var(--accent);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .chip-a{top:26px;left:8px}
+  .chip-b{bottom:40px;left:0}
+  .chip-c{top:60px;right:6px;color:var(--warn)}
+  .tool{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 0 40px}
+  @media(max-width:820px){.tool{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:20px}
+  .card h2{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+  textarea{width:100%;height:260px;background:#080b11;color:var(--text);border:1px solid var(--border);border-radius:10px;
+    padding:14px;font-family:ui-monospace,Consolas,monospace;font-size:13px;resize:vertical}
   .row{display:flex;gap:10px;margin-top:12px}
-  button{background:var(--accent);color:#08211d;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;font-size:14px}
+  button{background:linear-gradient(180deg,var(--accent),#18b8a3);color:#04211d;border:0;border-radius:10px;
+    padding:11px 18px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit}
   button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
-  button:hover{opacity:.9}
+  button:hover{filter:brightness(1.05)}
   .badges{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
   .badge{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--border)}
   .badge.ok{background:rgba(63,185,80,.15);color:var(--ok);border-color:var(--ok)}
   .badge.bad{background:rgba(248,81,73,.15);color:var(--err);border-color:var(--err)}
   .badge.neutral{background:transparent;color:var(--muted)}
-  .issue{border-left:3px solid var(--muted);padding:8px 12px;margin-bottom:8px;background:#0d1117;border-radius:0 6px 6px 0;font-size:13px}
+  .issue{border-left:3px solid var(--muted);padding:9px 12px;margin-bottom:8px;background:#080b11;border-radius:0 8px 8px 0;font-size:13px}
   .issue.ERROR{border-color:var(--err)}
   .issue.WARNING{border-color:var(--warn)}
   .issue.INFORMATION{border-color:var(--accent)}
   .issue .sev{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
   .issue.ERROR .sev{color:var(--err)}
   .issue.WARNING .sev{color:var(--warn)}
-  .issue .code{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:5px;background:#161b22;border:1px solid var(--border);color:var(--accent);font-family:ui-monospace,monospace;font-size:11px;letter-spacing:0}
+  .issue .code{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:5px;background:var(--panel);border:1px solid var(--border);color:var(--accent);font-family:ui-monospace,monospace;font-size:11px}
   .issue .loc{color:var(--muted);font-family:ui-monospace,monospace;font-size:12px;margin:2px 0}
   .placeholder{color:var(--muted);font-size:14px}
-</style>
+  footer{border-top:1px solid var(--border);padding:22px 0 40px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .batch{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 0 40px}
+  @media(max-width:820px){.batch{grid-template-columns:1fr}}
+  .kpi{font-family:Sora,sans-serif;font-size:52px;font-weight:800;line-height:1;display:flex;flex-direction:column;margin-bottom:18px}
+  .kpi span{font-family:Inter,sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .kpi.ok{color:var(--ok)} .kpi.warn{color:var(--warn)} .kpi.bad{color:var(--err)}
+  .stats{display:flex;gap:22px;margin-bottom:20px}
+  .stat{font-size:13px;color:var(--muted)} .stat b{display:block;font-family:Sora,sans-serif;font-size:22px;color:var(--text)}
+  .bars-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px}
+  .bar-label{width:64px;font-family:ui-monospace,monospace;color:var(--accent)}
+  .bar-track{flex:1;height:10px;background:#080b11;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .bar-fill{display:block;height:100%;background:linear-gradient(90deg,var(--warn),#e0a52e)}
+  .bar-val{width:28px;text-align:right;color:var(--muted)}</style>
 </head>
 <body>
-<header>
-  <h1><span>Sentinel</span> — FHIR Claim Validator</h1>
-  <p>NPHIES / FHIR R4 pre-submission validation · catch broken claims before a payer rejects them</p>
-</header>
-<main>
-  <section class="card">
-    <h2>Claim (FHIR R4 JSON)</h2>
-    <textarea id="input"></textarea>
-    <div class="row">
-      <button onclick="validate()">Validate claim</button>
-      <button class="ghost" onclick="loadSample()">Load sample</button>
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="26" height="28" viewBox="0 0 120 130" aria-hidden="true">
+        <defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs>
+        <path d="M60 6 L110 26 V60 C110 92 88 114 60 124 C32 114 10 92 10 60 V26 Z" fill="rgba(45,212,191,0.08)" stroke="url(#m)" stroke-width="6"/>
+        <path d="M30 64 h16 l7 -16 11 32 7 -16 h18" fill="none" stroke="url(#m)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span>Sentinel</span>
+    </div>
+    <div class="chips-top">Java 21 · Spring Boot 4 · HAPI FHIR R4</div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">NPHIES · FHIR R4 · EHDS</div>
+      <h1>Catch broken claims before the payer does.</h1>
+      <p>Sentinel checks health insurance claims for structural and payer-rule problems before they are ever submitted, so providers face fewer denials and get paid faster.</p>
+      <div class="layers">
+        <div class="layer"><span class="dot"></span> FHIR R4 structural validation</div>
+        <div class="layer"><span class="dot"></span> NPHIES payer denial rules, mapped to real adjudication codes</div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="glow"></div>
+      <svg class="shield" width="200" height="216" viewBox="0 0 120 130" aria-hidden="true">
+        <defs><linearGradient id="s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs>
+        <path d="M60 6 L110 26 V60 C110 92 88 114 60 124 C32 114 10 92 10 60 V26 Z" fill="rgba(45,212,191,0.06)" stroke="url(#s)" stroke-width="2.5"/>
+        <path d="M28 66 h16 l7 -18 11 36 7 -18 h19" fill="none" stroke="url(#s)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="chip chip-a">BE-1-6</span>
+      <span class="chip chip-b">FHIR R4</span>
+      <span class="chip chip-c">BE-1-4</span>
     </div>
   </section>
-  <section class="card">
-    <h2>Result</h2>
-    <div id="badges" class="badges"></div>
-    <div id="issues"><p class="placeholder">Submit a claim to see validation results.</p></div>
+
+  <section class="tool">
+    <div class="card">
+      <h2>Claim (FHIR R4 JSON)</h2>
+      <textarea id="input"></textarea>
+      <div class="row">
+        <button onclick="validate()">Validate claim</button>
+        <button class="ghost" onclick="loadSample()">Load sample</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Result</h2>
+      <div id="badges" class="badges"></div>
+      <div id="issues"><p class="placeholder">Submit a claim to see validation results.</p></div>
+    </div>
   </section>
-</main>
+
+  <section class="batch">
+    <div class="card">
+      <h2>Batch analytics</h2>
+      <p class="hint">Paste a JSON array of claims to see the first-pass approval rate and the denial reasons driving rejections.</p>
+      <textarea id="batchInput"></textarea>
+      <div class="row">
+        <button onclick="runBatch()">Run batch</button>
+        <button class="ghost" onclick="loadBatchSample()">Load sample batch</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Denial analytics</h2>
+      <div id="batchResult"><p class="placeholder">Run a batch to see analytics.</p></div>
+    </div>
+  </section>  <footer>
+    <span>Sentinel · pre-submission FHIR claim validation</span>
+    <span>Built by Abbe Kibe · <a href="https://github.com/Abbe11">github.com/Abbe11</a></span>
+  </footer>
+</div>
 <script>
-var SAMPLE = {resourceType:"Claim", id:"claim-001", status:"active"};
+var SAMPLE = {resourceType:"Claim", id:"claim-002", status:"active", item:[{sequence:1, net:{value:100, currency:"SAR"}}], total:{value:150, currency:"SAR"}};
 function loadSample(){ document.getElementById('input').value = JSON.stringify(SAMPLE, null, 2); }
 loadSample();
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -90,6 +187,36 @@ async function validate(){
       '<div>' + escapeHtml(i.message||'') + '</div></div>';
   }).join('');
 }
-</script>
+var BATCH_SAMPLE = [
+  {resourceType:"Claim",id:"c1",status:"active",item:[{sequence:1,net:{value:100,currency:"SAR"}}],total:{value:150,currency:"SAR"}},
+  {resourceType:"Claim",id:"c2",status:"active"},
+  {resourceType:"Claim",id:"c3",status:"active",item:[{sequence:1,net:{value:200,currency:"SAR"}}],total:{value:200,currency:"SAR"}}
+];
+function loadBatchSample(){ document.getElementById("batchInput").value = JSON.stringify(BATCH_SAMPLE, null, 2); }
+loadBatchSample();
+async function runBatch(){
+  var el = document.getElementById("batchResult");
+  el.innerHTML = "<p class=\"placeholder\">Running...</p>";
+  var data;
+  try{
+    var res = await fetch("/fhir/validate/batch", {method:"POST", headers:{"Content-Type":"application/json"}, body: document.getElementById("batchInput").value});
+    data = await res.json();
+  }catch(e){ el.innerHTML = "<p class=\"placeholder\">Request failed: " + e + "</p>"; return; }
+  if(!data.summary){ el.innerHTML = "<p class=\"placeholder\">" + escapeHtml(data.error || "Unexpected response") + "</p>"; return; }
+  var s = data.summary;
+  var rate = Math.round(s.firstPassRate);
+  var rateClass = rate >= 90 ? "ok" : (rate >= 70 ? "warn" : "bad");
+  var codes = s.codeCounts || {};
+  var maxCount = 0; for (var k in codes){ if (codes[k] > maxCount) maxCount = codes[k]; }
+  var bars = Object.keys(codes).sort(function(a,b){ return codes[b] - codes[a]; }).map(function(code){
+    var w = maxCount ? Math.round(codes[code] / maxCount * 100) : 0;
+    return "<div class=\"bar-row\"><span class=\"bar-label\">" + escapeHtml(code) + "</span><span class=\"bar-track\"><span class=\"bar-fill\" style=\"width:" + w + "%\"></span></span><span class=\"bar-val\">" + codes[code] + "</span></div>";
+  }).join("");
+  el.innerHTML =
+    "<div class=\"kpi " + rateClass + "\">" + rate + "%<span>first-pass approval</span></div>" +
+    "<div class=\"stats\"><div class=\"stat\"><b>" + s.total + "</b>claims</div><div class=\"stat\"><b>" + s.valid + "</b>passed</div><div class=\"stat\"><b>" + s.invalid + "</b>flagged</div></div>" +
+    "<div class=\"bars-title\">Denial reasons (NPHIES codes)</div>" +
+    (bars || "<p class=\"placeholder\">No denial codes fired.</p>");
+}</script>
 </body>
 </html>
